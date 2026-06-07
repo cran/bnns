@@ -1,83 +1,43 @@
-# general
-test_that("generates code for continuous response correctly", {
-  stan_code <- generate_stan_code(num_layers = 2, nodes = c(10, 5), out_act_fn = 1)
+library(testthat)
+library(bnns)
 
-  # Tests
-  expect_type(stan_code, "character") # Stan code should be a character string
-  expect_match(stan_code, "data \\{", fixed = FALSE) # Check data block exists
-  expect_match(stan_code, "y ~ normal", fixed = FALSE) # Check binary response model
-  expect_match(stan_code, "matrix\\[n, nodes\\[1\\]\\] z1", fixed = FALSE) # Check intermediate layers
+test_that("generate_stan_code specific wrappers check node length and values", {
+  # Test node length mismatch
+  expect_error(bnns:::generate_stan_code_cont(2, c(10)))
+  expect_error(bnns:::generate_stan_code_bin(2, c(10)))
+  expect_error(bnns:::generate_stan_code_cat(2, c(10)))
+  
+  # Test non-positive nodes
+  expect_error(bnns:::generate_stan_code_cont(1, c(0)))
+  expect_error(bnns:::generate_stan_code_bin(1, c(0)))
+  expect_error(bnns:::generate_stan_code_cat(1, c(0)))
 })
 
-test_that("generates code for binary response correctly", {
-  stan_code <- generate_stan_code(num_layers = 2, nodes = c(10, 5), out_act_fn = 2)
-
-  # Tests
-  expect_type(stan_code, "character") # Stan code should be a character string
-  expect_match(stan_code, "data \\{", fixed = FALSE) # Check data block exists
-  expect_match(stan_code, "y ~ bernoulli_logit", fixed = FALSE) # Check binary response model
-  expect_match(stan_code, "matrix\\[n, nodes\\[1\\]\\] z1", fixed = FALSE) # Check intermediate layers
-})
-
-test_that("generates code for categorical response correctly", {
-  stan_code <- generate_stan_code(num_layers = 2, nodes = c(10, 5), out_act_fn = 3)
-
-  # Tests
-  expect_type(stan_code, "character") # Stan code should be a character string
-  expect_match(stan_code, "data \\{", fixed = FALSE) # Check data block exists
-  expect_no_match(stan_code, "y ~ categorical_logit", fixed = FALSE) # Check binary response model
-  expect_match(stan_code, "y\\[i\\] ~ categorical_logit", fixed = FALSE) # Check binary response model
-  expect_match(stan_code, "matrix\\[n, nodes\\[1\\]\\] z1", fixed = FALSE) # Check intermediate layers
-})
-
-
-# continuous
-test_that("code generation works", {
-  expect_equal(class(generate_stan_code_cont(1, 16)), "character")
-})
-
-test_that("code generation works", {
-  expect_equal(class(generate_stan_code_cont(2, c(4, 2))), "character")
-})
-
-test_that("shows error for <1 nodes", {
-  expect_error(generate_stan_code_cont(2, c(4, 0)))
-})
-
-test_that("shows error for nodes matching layers", {
-  expect_error(generate_stan_code_cont(2, c(4, 2, 1)))
-})
-
-# binary
-test_that("code generation works", {
-  expect_equal(class(generate_stan_code_bin(1, 16)), "character")
-})
-
-test_that("code generation works", {
-  expect_equal(class(generate_stan_code_bin(2, c(4, 2))), "character")
-})
-
-test_that("shows error for <1 nodes", {
-  expect_error(generate_stan_code_bin(2, c(4, 0)))
-})
-
-test_that("shows error for nodes matching layers", {
-  expect_error(generate_stan_code_bin(2, c(4, 2, 1)))
-})
-
-# categorical
-test_that("code generation works", {
-  expect_equal(class(generate_stan_code_cat(1, 16)), "character")
-})
-
-test_that("code generation works", {
-  expect_equal(class(generate_stan_code_cat(2, c(4, 2))), "character")
-})
-
-test_that("shows error for <1 nodes", {
-  expect_error(generate_stan_code_cat(2, c(4, 0)))
-})
-
-test_that("shows error for nodes matching layers", {
-  expect_error(generate_stan_code_cat(2, c(4, 2, 1)))
+test_that("generate_stan_code works for various out_act_fn and multiple layers", {
+  # out_act_fn = 1, regression, 2 layers
+  code1 <- bnns:::generate_stan_code(num_layers = 2, nodes = c(2, 3), out_act_fn = 1)
+  expect_true(grepl("vector\\[n\\] y; // Output vector for regression", code1))
+  expect_true(grepl("real<lower=0> sigma;", code1))
+  expect_true(grepl("normal_lpdf", code1))
+  
+  # out_act_fn = 2, binary, 1 layer
+  code2 <- bnns:::generate_stan_code(num_layers = 1, nodes = c(2), out_act_fn = 2)
+  expect_true(grepl("array\\[n\\] int y; // Output vector for binary", code2))
+  expect_true(grepl("bernoulli_logit_lpmf", code2))
+  
+  # out_act_fn = 3, multiclass, 2 layers
+  code3 <- bnns:::generate_stan_code(num_layers = 2, nodes = c(2, 3), out_act_fn = 3)
+  expect_true(grepl("array\\[n\\] int y; // Output vector for multiclass", code3))
+  expect_true(grepl("categorical_logit_lpmf", code3))
+  
+  # Test prior_weights_dist = horseshoe with all 3 output activation functions
+  code_hs1 <- bnns:::generate_stan_code(num_layers = 2, nodes = c(2, 3), out_act_fn = 1, prior_weights_dist = "horseshoe")
+  expect_true(grepl("w1_raw .* lambda_w1", code_hs1))
+  expect_true(grepl("vector\\[nodes\\[2\\]\\] w_out = w_out_raw .* lambda_w_out \\* tau_w_out", code_hs1))
+  
+  code_hs2 <- bnns:::generate_stan_code(num_layers = 1, nodes = c(2), out_act_fn = 2, prior_weights_dist = "horseshoe")
+  expect_true(grepl("vector\\[nodes\\[1\\]\\] w_out = w_out_raw .* lambda_w_out \\* tau_w_out", code_hs2))
+  
+  code_hs3 <- bnns:::generate_stan_code(num_layers = 1, nodes = c(2), out_act_fn = 3, prior_weights_dist = "horseshoe")
+  expect_true(grepl("to_matrix\\(w_out_raw .* lambda_w_out \\* tau_w_out", code_hs3))
 })

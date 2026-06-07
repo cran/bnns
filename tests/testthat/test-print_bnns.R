@@ -16,7 +16,7 @@ capture_output <- function(expr) {
 
 # Test script for print.bnns
 test_that("print.bnns outputs correctly", {
-  output <- capture_output(print.bnns(mock_bnns))
+  output <- capture_output(print(mock_bnns))
 
   # Test that "Call:" is present
   expect_true(any(grepl("^Call:$", output)))

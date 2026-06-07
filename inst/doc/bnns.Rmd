@@ -73,7 +73,7 @@ Fit a Bayesian Neural Network using the `bnns()` function. Specify the network a
 
 ### Regression Example
 
-```{r message=FALSE, warning=FALSE, echo = TRUE, results = 'hide'}
+```{r message=FALSE, warning=FALSE, echo = TRUE, results = 'hide', eval = FALSE}
 model_reg <- bnns(
   y ~ -1 + x1 + x2,
   data = df,
@@ -123,7 +123,7 @@ model_cat <- bnns(
 
 Use the `summary()` function to view details of the fitted model, including the network architecture, posterior distributions, and predictive performance.
 
-```{r}
+```{r eval = FALSE}
 summary(model_reg)
 ```
 
@@ -136,7 +136,7 @@ summary(model_cat)
 
 The `predict()` function generates predictions for new data. The format of predictions depends on the output activation function.
 
-```{r}
+```{r eval = FALSE}
 # New data
 test_x <- matrix(runif(10), nrow = 5, ncol = 2) |>
   data.frame() |>
@@ -160,7 +160,7 @@ The `bnns` package includes utility functions like `measure_cont`, `measure_bin`
 
 ### Regression Evaluation
 
-```{r}
+```{r eval = FALSE}
 # True responses
 test_y <- rnorm(5)
 

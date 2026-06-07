@@ -11,6 +11,7 @@
   nodes = rep(2, L),
   act_fn = rep(2, L),
   out_act_fn = 1,
+  algorithm = c("NUTS", "HMC"),
   iter = 1000,
   warmup = 200,
   thin = 1,
@@ -23,6 +24,9 @@
   verbose = FALSE,
   refresh = max(iter/10, 1),
   normalize = TRUE,
+  backend = c("rstan", "cmdstanr"),
+  use_gpu = FALSE,
+  opencl_ids = c(0, 0),
   ...
 )
 }
@@ -44,12 +48,14 @@
 \item \code{5} for linear
 }}
 
-\item{out_act_fn}{An integer specifying the activation function for the output layer. Options are:
+\item{out_act_fn}{An integer or character string specifying the activation function for the output layer. Options are:
 \itemize{
-\item \code{1} for linear (default)
-\item \code{2} for sigmoid
-\item \code{3} for softmax
+\item \code{1} or \code{"linear"} for linear (default)
+\item \code{2} or \code{"sigmoid"} for sigmoid
+\item \code{3} or \code{"softmax"} for softmax
 }}
+
+\item{algorithm}{A character string specifying the MCMC algorithm. Options are \code{"NUTS"} (default) or \code{"HMC"}.}
 
 \item{iter}{An integer specifying the total number of iterations for the Stan sampler. Default is \code{1e3}.}
 
@@ -67,7 +73,7 @@
 The list must include two components:
 \itemize{
 \item \code{dist}: A character string specifying the distribution type. Supported values are
-\code{"normal"}, \code{"uniform"}, and \code{"cauchy"}.
+\code{"normal"}, \code{"uniform"}, \code{"cauchy"}, and \code{"horseshoe"}.
 \item \code{params}: A named list specifying the parameters for the chosen distribution:
 \itemize{
 \item For \code{"normal"}: Provide \code{mean} (mean of the distribution) and \code{sd} (standard deviation).
@@ -75,6 +81,7 @@ The list must include two components:
 \item For \code{"cauchy"}: Provide \code{mu} (location parameter) and \code{sigma} (scale parameter).
 }
 }
+For the \code{"horseshoe"} prior, \code{params} is not needed as it uses a standard half-Cauchy setup.
 If \code{prior_weights} is \code{NULL}, the default prior is a \code{normal(0, 1)} distribution.
 For example:
 \itemize{
@@ -132,6 +139,12 @@ Normalization ensures stable and efficient Bayesian sampling by standardizing
 the input scale, which is particularly beneficial for neural network training.
 If \code{FALSE}, no normalization is applied, and it is assumed that the input data
 is already pre-processed appropriately.}
+
+\item{backend}{A character string specifying the Stan backend to use. Options are \code{"rstan"} (default) or \code{"cmdstanr"}.}
+
+\item{use_gpu}{Logical. If \code{TRUE}, enables OpenCL for GPU acceleration. Default is \code{FALSE}. (Requires the \code{"cmdstanr"} backend).}
+
+\item{opencl_ids}{A vector of two integers specifying the OpenCL platform and device IDs. Default is \code{c(0, 0)}.}
 
 \item{...}{Currently not in use.}
 }
